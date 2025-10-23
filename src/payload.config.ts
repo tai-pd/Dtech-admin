@@ -1,23 +1,20 @@
 // storage-adapter-import-placeholder
 import { postgresAdapter } from '@payloadcms/db-postgres'
 
+import sharp from 'sharp' // sharp-import
 import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
-import sharp from 'sharp' // sharp-import
 import { fileURLToPath } from 'url'
 
-import { defaultLexical } from '@/fields/defaultLexical'
-
-import Brands from './collections/Brands'
-import Categories from './collections/Categories'
-import Media from './collections/Media'
-import Pages from './collections/Pages'
-import Posts from './collections/Posts'
-import Products from './collections/Products'
-import Users from './collections/User'
+import { Categories } from './collections/Categories'
+import { Media } from './collections/Media'
+import { Pages } from './collections/Pages'
+import { Posts } from './collections/Posts'
+import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { plugins } from './plugins'
+import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
 
 const filename = fileURLToPath(import.meta.url)
@@ -65,10 +62,14 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
-      ssl: process.env.NODE_ENV === 'production' ? undefined : { rejectUnauthorized: false },
+      ssl:
+        process.env.NODE_ENV === 'production'
+          ? { rejectUnauthorized: true }
+          : { rejectUnauthorized: false },
     },
+    push: false,
   }),
-  collections: [Users, Media, Categories, Brands, Products, Pages, Posts],
+  collections: [Pages, Posts, Media, Categories, Users],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [
@@ -79,48 +80,6 @@ export default buildConfig({
   sharp,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
-  onInit: async (payloadInstance) => {
-    try {
-      // Chỉ tạo admin nếu DB chưa có user nào
-      const usersResult = await payloadInstance.find({
-        collection: 'users',
-        limit: 1,
-      })
-
-      if (usersResult.totalDocs === 0) {
-        // Chỉ tự động tạo admin khi biến môi trường bật (an toàn cho prod)
-        const autoCreate = process.env.AUTO_CREATE_ADMIN === 'true'
-        if (!autoCreate) {
-          payloadInstance.logger.info(
-            'No users found, but AUTO_CREATE_ADMIN is not enabled — skipping auto create.',
-          )
-          return
-        }
-
-        const email = process.env.ADMIN_EMAIL || 'admin@dtech.local'
-        const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!'
-        const name = process.env.ADMIN_NAME || 'Admin DTech'
-
-        payloadInstance.logger.info(`No users found — creating default admin (${email})`)
-
-        await payloadInstance.create({
-          collection: 'users',
-          data: {
-            email,
-            password,
-            name,
-            roles: ['admin'],
-          },
-        })
-
-        payloadInstance.logger.info('Default admin user created.')
-      }
-    } catch (err) {
-      // Log lỗi nhưng không ngăn Payload khởi động
-      // eslint-disable-next-line no-console
-      payloadInstance.logger.error('Error in onInit admin creation:', err)
-    }
   },
   jobs: {
     access: {

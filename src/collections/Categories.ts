@@ -1,15 +1,28 @@
 import type { CollectionConfig } from 'payload'
 
-const Categories: CollectionConfig = {
+import { anyone } from '../access/anyone'
+import { authenticated } from '../access/authenticated'
+import { slugField } from 'payload'
+
+export const Categories: CollectionConfig = {
   slug: 'categories',
-  labels: { singular: 'Danh mục', plural: 'Danh mục' },
-  admin: { useAsTitle: 'name' },
+  access: {
+    create: authenticated,
+    delete: authenticated,
+    read: anyone,
+    update: authenticated,
+  },
+  admin: {
+    useAsTitle: 'title',
+  },
   fields: [
-    { name: 'name', type: 'text', required: true },
-    { name: 'slug', type: 'text' },
-    { name: 'description', type: 'textarea' },
-    { name: 'order', type: 'number', admin: { position: 'sidebar' } },
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    slugField({
+      position: undefined,
+    }),
   ],
 }
-
-export default Categories
